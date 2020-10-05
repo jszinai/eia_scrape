@@ -3,8 +3,9 @@
 # git history.
 
 # Individuals
-Josiah Johnston
-Benjamin Maluenda <bmaluenda@inodu.com>
+Josiah Johnston (original 2017 code)
+Benjamin Maluenda <bmaluenda@inodu.com> (original 2017 code)
+Julia Szinai (edits in 2020)
 
 # Organizations
 University of California Berkeley

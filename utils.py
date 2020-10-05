@@ -20,6 +20,9 @@ import pandas as pd
 download_metadata_fields = ('filename', 'url', 'download_timestamp_utc', 'sha1')
 # A standard size for chunking data for disk writes: 64kb = 2^16 = 65536
 BLOCKSIZE = 65536
+_NOT_ENTERED = object()
+saved_user = _NOT_ENTERED
+saved_password = _NOT_ENTERED
 
 def download_file(url, local_path):
     """
@@ -52,18 +55,24 @@ def unzip(file_list):
             print "Skipping "+unzip_name+" because it was already unzipped."
 
 
-def connect_to_db_and_push_df(df, col_formats, table, database='postgres', host='localhost', port=5433, user=None, password=None, quiet=False):
-    if user == None:
-        user = getpass.getpass('Enter username for database {}:'.format(database))
-    if password == None:    
-        password = getpass.getpass('Enter database password for user {}:'.format(user))
+def connect_to_db_and_push_df(df, col_formats, table, database='postgres', host='switch-db2.erg.berkeley.edu', port=5432, user=None, password=None, quiet=False):
+    global saved_user, saved_password
+    if user is None:
+        user = saved_user
+    if password is None:
+        password = saved_password
+    if user is _NOT_ENTERED:
+        saved_user = user = getpass.getpass('Enter username for database {}:'.format(database))
+    if password is _NOT_ENTERED:
+        saved_password = password = getpass.getpass('Enter database password for user {}:'.format(user))
     try:
         con = psycopg2.connect(database=database, user=user, host=host,
             port=port, password=password)
         if not quiet:
             print "Connection to database established..."
-    except:
-        sys.exit("Error connecting to database {} at host {}:{}.".format(database,host,port))
+    except Exception, e:
+        print "Error connecting to database {} at host {}:{}.".format(database,host,port)
+        raise e
 
     cur = con.cursor()
     try:
@@ -74,27 +83,34 @@ def connect_to_db_and_push_df(df, col_formats, table, database='postgres', host=
             print "Successfully pushed values"
     except Exception, e:
         print 'Query execution failed with error: {}'.format(e)
-        return None
-    con.commit()
-    cur.close()
-    con.close()
+        raise e
+    finally:
+        con.commit()
+        cur.close()
+        con.close()
     if not quiet:
         print 'Database connection closed.'
     return
 
 
-def connect_to_db_and_run_query(query, database='postgres', host='localhost', port=5433, user=None, password=None, quiet=False):
-    if user == None:
-        user = getpass.getpass('Enter username for database {}:'.format(database))
-    if password == None:
-        password = getpass.getpass('Enter database password for user {}:'.format(user))
+def connect_to_db_and_run_query(query, database='postgres', host='switch-db2.erg.berkeley.edu', port=5432, user=None, password=None, quiet=False):
+    global saved_user, saved_password
+    if user is None:
+        user = saved_user
+    if password is None:
+        password = saved_password
+    if user is _NOT_ENTERED:
+        saved_user = user = getpass.getpass('Enter username for database {}:'.format(database))
+    if password is _NOT_ENTERED:
+        saved_password = password = getpass.getpass('Enter database password for user {}:'.format(user))
     try:
         con = psycopg2.connect(database=database, user=user, host=host,
             port=port, password=password)
         if not quiet:
             print "Connection to database established..."
-    except:
-        sys.exit("Error connecting to database {} at host {}:{}.".format(database,host,port))
+    except Exception, e:
+        print "Error connecting to database {} at host {}:{}.".format(database,host,port)
+        raise e
 
     cur = con.cursor()
     try:
@@ -111,10 +127,11 @@ def connect_to_db_and_run_query(query, database='postgres', host='localhost', po
                 print 'Successfully executed query with no results.'
     except Exception, e:
         print 'Query execution failed with error: {}'.format(e)
-        return None
-    con.commit()
-    cur.close()
-    con.close()
+        raise e
+    finally:
+        con.commit()
+        cur.close()
+        con.close()
     if not quiet:
         print 'Database connection closed.'
     return
